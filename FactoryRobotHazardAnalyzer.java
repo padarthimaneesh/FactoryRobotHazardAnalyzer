@@ -3,21 +3,19 @@ import java.util.Scanner;
 /**
  * Factory Robot Hazard Analyzer
  *
- * UC5 - Refactored validation and calculation.
- * UC6 - Custom Exception Handling using RobotSafetyException.
+ * UC6 - Custom Exception Handling.
+ * UC7 - Machinery State Risk Mapping using Enum.
  *
- * Validation and hazard risk calculation are handled in a separate method
- * to keep main() minimal and readable.
  * Uses RobotSafetyException to handle invalid inputs
- * in a clean and standardized way.
+ * and Enum to map machinery state to risk factor
+ * in a structured and extensible way.
  *
  * @Developer Maneesh
- * @version 6.0
+ * @version 7.0
  */
 
 // Custom Exception
 class RobotSafetyException extends Exception {
-
     public RobotSafetyException(String message) {
         super(message);
     }
@@ -31,30 +29,27 @@ public class FactoryRobotHazardAnalyzer {
 
         try {
             // Input collection
-            System.out.println("Enter Arm precision (0.0 - 1.0): ");
+            System.out.print("Enter Arm Precision (0.0 - 1.0): ");
             double armPrecision = sc.nextDouble();
 
-            System.out.println("Enter Worker Density (1 - 20): ");
+            System.out.print("Enter Worker Density (1 - 20): ");
             int workerDensity = sc.nextInt();
-
             sc.nextLine(); // clear buffer
 
-            System.out.println("Enter Machinery State (Worn/Faulty/Critical):");
-            String machineState = sc.nextLine();
+            System.out.print("Enter Machinery State (Worn/Faulty/Critical): ");
+            String machineStateInput = sc.nextLine();
 
             // Call method with exception handling
             double hazardRisk = calculateHazardRisk(
                     armPrecision,
                     workerDensity,
-                    machineState
+                    machineStateInput
             );
 
-            // Display result
             System.out.println("\n--- Hazard Risk Result ---");
             System.out.println("Hazard Risk Score: " + hazardRisk);
 
         } catch (RobotSafetyException e) {
-            // Exception message displayed by exception itself
             System.out.println("\nSafety Error: " + e.getMessage());
         }
 
@@ -63,12 +58,12 @@ public class FactoryRobotHazardAnalyzer {
 
     /**
      * Validates inputs and calculates hazard risk.
-     * Throws RobotSafetyException if any input is invalid.
+     * Uses enum-based machinery state mapping.
      */
     public static double calculateHazardRisk(
             double armPrecision,
             int workerDensity,
-            String machineState)
+            String machineStateInput)
             throws RobotSafetyException {
 
         // Validation
@@ -84,31 +79,48 @@ public class FactoryRobotHazardAnalyzer {
             );
         }
 
-        if (!machineState.equalsIgnoreCase("Worn")
-                && !machineState.equalsIgnoreCase("Faulty")
-                && !machineState.equalsIgnoreCase("Critical")) {
+        // Convert string to enum safely
+        MachineryState state =
+                MachineryState.fromString(machineStateInput);
 
-            throw new RobotSafetyException(
-                    "Machinery state must be Worn, Faulty, or Critical."
-            );
-        }
+        double machineRiskFactor = state.getRiskFactor();
 
-        // Business logic
-        double machineRiskFactor = getMachineRiskFactor(machineState);
-
+        // Hazard risk formula
         return ((1.0 - armPrecision) * 15.0)
                 + (workerDensity * machineRiskFactor);
     }
+}
 
-    // Returns machine risk factor
-    public static double getMachineRiskFactor(String machineState) {
+/**
+ * Enum representing machinery states and their risk factors.
+ */
+enum MachineryState {
 
-        if (machineState.equalsIgnoreCase("Worn")) {
-            return 1.3;
-        } else if (machineState.equalsIgnoreCase("Faulty")) {
-            return 2.0;
-        } else { // Critical
-            return 3.0;
+    WORN(1.3),
+    FAULTY(2.0),
+    CRITICAL(3.0);
+
+    private final double riskFactor;
+
+    MachineryState(double riskFactor) {
+        this.riskFactor = riskFactor;
+    }
+
+    public double getRiskFactor() {
+        return riskFactor;
+    }
+
+    // Convert user input string to enum safely
+    public static MachineryState fromString(String state)
+            throws RobotSafetyException {
+
+        try {
+            return MachineryState.valueOf(state.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RobotSafetyException(
+                    "Unsupported machinery state: " + state +
+                            ". Allowed values are Worn, Faulty, or Critical."
+            );
         }
     }
 }
